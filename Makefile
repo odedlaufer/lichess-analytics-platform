@@ -9,7 +9,7 @@ endif
 PROFILES ?= lake
 COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
 
-.PHONY: help setup lint format typecheck test test-integration up down ps buckets month backfill live bench
+.PHONY: help setup lint format typecheck test test-integration up down ps buckets build spark-smoke month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,16 +36,20 @@ test-integration: ## Run integration tests against running services
 	uv run pytest -m integration
 
 up: ## Start services: make up PROFILES="lake spark"
-	$(COMPOSE) up -d --wait
-	@if echo "$(PROFILES)" | grep -qw lake; then $(MAKE) --no-print-directory buckets; fi
-
-buckets: ## Create the lake bucket if missing (idempotent)
-	@if $(COMPOSE) exec -T seaweedfs sh -c 'echo "s3.bucket.list" | weed shell' 2>/dev/null | grep -qw "$(LAKE_BUCKET)"; then \
-		echo "bucket $(LAKE_BUCKET): exists"; \
-	else \
-		$(COMPOSE) exec -T seaweedfs sh -c 'echo "s3.bucket.create -name $(LAKE_BUCKET)" | weed shell' >/dev/null 2>&1 \
-		&& echo "bucket $(LAKE_BUCKET): created"; \
+	@# Object store + bucket/markers first: Spark needs s3a://lake/_spark-events at startup.
+	@if echo "$(PROFILES)" | grep -qw lake; then \
+		docker compose --profile lake up -d --wait seaweedfs && $(MAKE) --no-print-directory buckets; \
 	fi
+	$(COMPOSE) up -d --wait
+
+buckets: ## Create the lake bucket and directory markers (idempotent)
+	uv run python -m tools.bootstrap_lake
+
+build: ## Build local images (Spark)
+	$(COMPOSE) build
+
+spark-smoke: ## Delta round-trip on the cluster: make spark-smoke PROFILES="lake spark"
+	$(COMPOSE) run --rm spark-submit spark/jobs/smoke_delta.py
 
 down: ## Stop services (keeps data volumes)
 	$(COMPOSE) down
