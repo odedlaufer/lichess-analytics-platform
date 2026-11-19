@@ -1,0 +1,13 @@
+<!-- Extends the user that the image entrypoint creates from CLICKHOUSE_USER / CLICKHOUSE_PASSWORD.
+     The element name must equal CLICKHOUSE_USER in .env. -->
+<clickhouse>
+    <users>
+        <lichess>
+            <named_collection_control>1</named_collection_control>
+            <show_named_collections>1</show_named_collections>
+            <!-- deltaLake() hands the collection's credentials to the Delta kernel, which needs this.
+                 This is the single admin user and already holds the same keys via .env. -->
+            <show_named_collections_secrets>1</show_named_collections_secrets>
+        </lichess>
+    </users>
+</clickhouse>

@@ -16,6 +16,8 @@ make test-integration           # tests against running services
 make build PROFILES="lake spark"        # build the Spark image
 make up PROFILES="lake spark"           # + Spark cluster
 make spark-smoke PROFILES="lake spark"  # Delta round-trip on the cluster
+make up PROFILES="lake spark olap"      # + ClickHouse
+make gate PROFILES="lake spark olap"    # Phase 0 gate: Spark -> Delta -> ClickHouse
 ```
 
 ## Local services
@@ -27,6 +29,8 @@ make spark-smoke PROFILES="lake spark"  # Delta round-trip on the cluster
 | Spark master UI | spark | http://localhost:28080 |
 | Spark worker UIs | spark | http://localhost:28081, :28082 |
 | Spark History Server | spark | http://localhost:28180 |
+| ClickHouse HTTP | olap | http://localhost:28123 (play UI: /play) |
+| ClickHouse native | olap | localhost:29000 |
 
 ## Layout
 See `docs/adr/` for decisions. Full structure and roadmap tracked in the PRD.
