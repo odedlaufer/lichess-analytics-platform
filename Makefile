@@ -9,7 +9,7 @@ endif
 PROFILES ?= lake
 COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
 
-.PHONY: help setup lint format typecheck test test-integration up down ps buckets topics build spark-smoke gate month backfill live bench
+.PHONY: help setup lint format typecheck check test test-integration up down ps buckets topics build spark-smoke gate month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -28,6 +28,9 @@ format: ## Auto-format
 
 typecheck: ## mypy strict
 	uv run mypy
+
+check: ## Local gate before every push: lint + typecheck + unit tests
+	@$(MAKE) --no-print-directory lint typecheck test
 
 test: ## Run unit tests
 	uv run pytest
