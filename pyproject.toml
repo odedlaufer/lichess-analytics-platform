@@ -9,6 +9,7 @@ dependencies = [
     "boto3>=1.35",
     "clickhouse-connect>=0.8",
     "confluent-kafka>=2.6",
+    "prefect==3.9.3",  # must equal the server image version
 ]
 
 [dependency-groups]
