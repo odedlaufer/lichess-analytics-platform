@@ -13,14 +13,20 @@ make setup
 make lint typecheck test        # unit tests, no services needed
 make up PROFILES=lake           # object store
 make test-integration           # tests against running services
+make build PROFILES="lake spark"        # build the Spark image
+make up PROFILES="lake spark"           # + Spark cluster
+make spark-smoke PROFILES="lake spark"  # Delta round-trip on the cluster
 ```
 
 ## Local services
 | Service | Profile | URL |
 | --- | --- | --- |
-| SeaweedFS S3 API | lake | http://localhost:18333 |
-| SeaweedFS filer UI | lake | http://localhost:18888 |
-| SeaweedFS master UI | lake | http://localhost:19333 |
+| SeaweedFS S3 API | lake | http://localhost:28333 |
+| SeaweedFS filer UI | lake | http://localhost:28888 |
+| SeaweedFS master UI | lake | http://localhost:29333 |
+| Spark master UI | spark | http://localhost:28080 |
+| Spark worker UIs | spark | http://localhost:28081, :28082 |
+| Spark History Server | spark | http://localhost:28180 |
 
 ## Layout
 See `docs/adr/` for decisions. Full structure and roadmap tracked in the PRD.

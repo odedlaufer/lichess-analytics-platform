@@ -2,7 +2,47 @@ name: lichess
 
 # Profiles: lake | spark | stream | olap | bi
 # Start with: make up PROFILES="lake"
-# Host ports use the 1xxxx range to avoid clashing with other local projects.
+# Host ports use the 2xxxx range (the fraud project uses 18xxx/19xxx).
+
+x-spark: &spark
+  image: lichess/spark:4.1.1-delta4.4.0
+  profiles: ["spark"]
+  restart: unless-stopped
+  environment:
+    AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env}
+    AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env}
+    AWS_REGION: us-east-1
+    LAKE_BUCKET: ${LAKE_BUCKET:-lake}
+    SPARK_DAEMON_MEMORY: 512m
+  volumes:
+    - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+  depends_on:
+    seaweedfs:
+      condition: service_healthy
+
+x-spark-worker: &spark-worker
+  <<: *spark
+  command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
+  environment:
+    AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env}
+    AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env}
+    AWS_REGION: us-east-1
+    LAKE_BUCKET: ${LAKE_BUCKET:-lake}
+    SPARK_DAEMON_MEMORY: 512m
+    SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
+    SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2560m}
+  depends_on:
+    spark-master:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "curl", "-fs", "-o", "/dev/null", "http://127.0.0.1:8081/json/"]
+    interval: 5s
+    timeout: 3s
+    retries: 24
+  deploy:
+    resources:
+      limits:
+        memory: 3584m
 
 services:
   seaweedfs:
@@ -21,9 +61,9 @@ services:
         JSON
         exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json
     ports:
-      - "127.0.0.1:${S3_PORT:-18333}:8333"            # S3 API
-      - "127.0.0.1:${SEAWEED_FILER_PORT:-18888}:8888"  # filer UI
-      - "127.0.0.1:${SEAWEED_MASTER_PORT:-19333}:9333" # master UI
+      - "127.0.0.1:${S3_PORT:-28333}:8333"            # S3 API
+      - "127.0.0.1:${SEAWEED_FILER_PORT:-28888}:8888"  # filer UI
+      - "127.0.0.1:${SEAWEED_MASTER_PORT:-29333}:9333" # master UI
     volumes:
       - seaweedfs-data:/data
     healthcheck:
@@ -36,6 +76,72 @@ services:
       resources:
         limits:
           memory: 1g
+
+  # --- Spark standalone cluster (profile: spark) -------------------------------
+  # Memory budget for ~9.7 GB Docker: 2 workers x 3.5g + master 0.75g + history 0.75g + seaweedfs 1g.
+
+  spark-master:
+    <<: *spark
+    build: ./spark   # built once here; every other Spark service reuses the image
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+    ports:
+      - "127.0.0.1:${SPARK_MASTER_UI_PORT:-28080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-o", "/dev/null", "http://127.0.0.1:8080/json/"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  spark-worker-1:
+    <<: *spark-worker
+    ports:
+      - "127.0.0.1:${SPARK_WORKER1_UI_PORT:-28081}:8081"
+
+  spark-worker-2:
+    <<: *spark-worker
+    ports:
+      - "127.0.0.1:${SPARK_WORKER2_UI_PORT:-28082}:8081"
+
+  spark-history:
+    <<: *spark
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.history.HistoryServer"]
+    ports:
+      - "127.0.0.1:${SPARK_HISTORY_UI_PORT:-28180}:18080"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-o", "/dev/null", "http://127.0.0.1:18080/api/v1/applications"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  # One-shot job runner: `make spark-smoke` / `docker compose run --rm spark-submit <job.py>`
+  spark-submit:
+    <<: *spark
+    profiles: ["tools"]
+    restart: "no"
+    working_dir: /opt/project
+    entrypoint:
+      - /bin/sh
+      - -c
+      - exec /opt/spark/bin/spark-submit --conf spark.driver.host=$$(hostname -i) --conf spark.driver.bindAddress=0.0.0.0 "$$@"
+      - spark-submit
+    volumes:
+      - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - .:/opt/project:ro
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
 volumes:
   seaweedfs-data:

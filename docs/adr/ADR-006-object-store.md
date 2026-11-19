@@ -21,7 +21,7 @@ community release channel.
 ## Decision
 Use SeaweedFS (`weed server -s3`) as a single container in the `lake` profile.
 
-- S3 API: `http://localhost:18333` (host ports in the 1xxxx range to avoid clashing with other local projects)
+- S3 API: `http://localhost:28333` (host ports in the 2xxxx range to avoid clashing with other local projects)
 - Auth: one admin identity generated at startup from `S3_ACCESS_KEY` / `S3_SECRET_KEY` in `.env`
 - Bucket `lake` created idempotently by `make buckets` (called by `make up`)
 - Clients use path-style addressing and SigV4

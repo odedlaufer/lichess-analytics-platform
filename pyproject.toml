@@ -14,6 +14,7 @@ dev = [
     "boto3-stubs[s3]>=1.35",
     "mypy>=1.11",
     "pre-commit>=3.8",
+    "pyspark==4.1.1",
     "pytest>=8.3",
     "pytest-cov>=5.0",
     "ruff>=0.6",
@@ -30,11 +31,14 @@ extend-exclude = ["sqlmesh", "superset"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "RUF", "PT", "C4"]
 
+[tool.ruff.lint.per-file-ignores]
+"spark/**" = ["N812"]  # `functions as F` is the PySpark convention
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_unused_configs = true
-files = ["ingest", "live", "flows", "tests"]
+files = ["ingest", "live", "flows", "spark", "tools", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
