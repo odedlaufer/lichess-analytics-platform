@@ -1,0 +1,13 @@
+<!-- Read-only ClickHouse user for Superset dashboards. -->
+<clickhouse>
+    <users>
+        <superset_ro>
+            <password from_env="CLICKHOUSE_SUPERSET_PASSWORD"/>
+            <profile>readonly</profile>
+            <networks><ip>::/0</ip></networks>
+            <grants>
+                <query>GRANT SELECT ON *.*</query>
+            </grants>
+        </superset_ro>
+    </users>
+</clickhouse>

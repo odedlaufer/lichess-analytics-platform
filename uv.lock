@@ -923,6 +923,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "boto3-stubs", extra = ["s3"] },
+    { name = "httpx" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "psycopg", extra = ["binary"] },
@@ -943,6 +944,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "boto3-stubs", extras = ["s3"], specifier = ">=1.35" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pre-commit", specifier = ">=3.8" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },

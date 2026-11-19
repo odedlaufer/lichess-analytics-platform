@@ -35,6 +35,7 @@ make up PROFILES="lake stream"          # + Kafka (creates topics)
 | Kafka (host clients) | stream | localhost:29092 |
 | Postgres (metadata) | olap, orch, bi | localhost:25432 |
 | Prefect UI / API | orch | http://localhost:24200 |
+| Superset | bi (+ olap) | http://localhost:28088 |
 
 ## Layout
 See `docs/adr/` for decisions. Full structure and roadmap tracked in the PRD.
