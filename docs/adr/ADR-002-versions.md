@@ -28,8 +28,9 @@ Why Spark 4.1.1 and not 4.2: Delta 4.4.0 supports 4.2.0, but the official Spark 
 | spark-history | 768 MB |
 | spark-worker × 2 | 3.5 GB each (2.5 GB executor pool + 512 MB daemon + Python workers) |
 | spark-submit (driver, on demand) | 2 GB |
+| clickhouse | 3 GB |
 | Kafka (KRaft) | TBD | | 0.2 |
-| ClickHouse | TBD | | 0.2 |
+| ClickHouse | 26.8.40.7 (26.8 LTS) | `clickhouse/clickhouse-server:26.8.40.7@sha256:6d462904…2330d59` | 0.4 |
 | Postgres | TBD | | 0.2 |
 | Prefect | TBD | | 0.2 |
 | Superset | TBD | | 0.2 |
