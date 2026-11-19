@@ -1,9 +1,8 @@
 name: ci
 
+# Manual for now: `make check` locally is the gate. Re-enable pull_request/push later.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
