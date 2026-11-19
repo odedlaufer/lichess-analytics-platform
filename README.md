@@ -34,6 +34,7 @@ make up PROFILES="lake stream"          # + Kafka (creates topics)
 | ClickHouse native | olap | localhost:29000 |
 | Kafka (host clients) | stream | localhost:29092 |
 | Postgres (metadata) | olap, orch, bi | localhost:25432 |
+| Prefect UI / API | orch | http://localhost:24200 |
 
 ## Layout
 See `docs/adr/` for decisions. Full structure and roadmap tracked in the PRD.
