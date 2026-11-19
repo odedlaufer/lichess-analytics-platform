@@ -18,6 +18,7 @@ make up PROFILES="lake spark"           # + Spark cluster
 make spark-smoke PROFILES="lake spark"  # Delta round-trip on the cluster
 make up PROFILES="lake spark olap"      # + ClickHouse
 make gate PROFILES="lake spark olap"    # Phase 0 gate: Spark -> Delta -> ClickHouse
+make up PROFILES="lake stream"          # + Kafka (creates topics)
 ```
 
 ## Local services
@@ -31,6 +32,7 @@ make gate PROFILES="lake spark olap"    # Phase 0 gate: Spark -> Delta -> ClickH
 | Spark History Server | spark | http://localhost:28180 |
 | ClickHouse HTTP | olap | http://localhost:28123 (play UI: /play) |
 | ClickHouse native | olap | localhost:29000 |
+| Kafka (host clients) | stream | localhost:29092 |
 
 ## Layout
 See `docs/adr/` for decisions. Full structure and roadmap tracked in the PRD.

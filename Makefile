@@ -9,7 +9,7 @@ endif
 PROFILES ?= lake
 COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
 
-.PHONY: help setup lint format typecheck test test-integration up down ps buckets build spark-smoke gate month backfill live bench
+.PHONY: help setup lint format typecheck test test-integration up down ps buckets topics build spark-smoke gate month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -41,9 +41,13 @@ up: ## Start services: make up PROFILES="lake spark"
 		docker compose --profile lake up -d --wait seaweedfs && $(MAKE) --no-print-directory buckets; \
 	fi
 	$(COMPOSE) up -d --wait
+	@if echo "$(PROFILES)" | grep -qw stream; then $(MAKE) --no-print-directory topics; fi
 
 buckets: ## Create the lake bucket and directory markers (idempotent)
 	uv run python -m tools.bootstrap_lake
+
+topics: ## Create Kafka topics declared in live/topics.py (idempotent)
+	uv run python -m live.topics
 
 build: ## Build local images (Spark)
 	$(COMPOSE) build
