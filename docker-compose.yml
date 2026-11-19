@@ -217,7 +217,37 @@ services:
         limits:
           memory: 1g
 
+  # --- Postgres: metadata DBs (profiles: olap, orch, bi) ---------------------------
+  # sqlmesh_state (SQLMesh), prefect (Prefect server), superset (Superset metadata).
+
+  postgres:
+    image: postgres:18.7@sha256:e754b839f447639b7004895f4d8a4bfcb4e9dbe3a1bc035f27f646562a16fd61
+    profiles: ["olap", "orch", "bi"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      SQLMESH_DB_PASSWORD: ${SQLMESH_DB_PASSWORD:?SQLMESH_DB_PASSWORD must be set in .env}
+      PREFECT_DB_PASSWORD: ${PREFECT_DB_PASSWORD:?PREFECT_DB_PASSWORD must be set in .env}
+      SUPERSET_DB_PASSWORD: ${SUPERSET_DB_PASSWORD:?SUPERSET_DB_PASSWORD must be set in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-25432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql   # Postgres 18+ layout (not .../data)
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
 volumes:
   seaweedfs-data:
   clickhouse-data:
   kafka-data:
+  postgres-data:

@@ -30,9 +30,10 @@ Why Spark 4.1.1 and not 4.2: Delta 4.4.0 supports 4.2.0, but the official Spark 
 | spark-submit (driver, on demand) | 2 GB |
 | clickhouse | 3 GB |
 | kafka | 1 GB (heap 512 MB) |
+| postgres | 512 MB |
 | Kafka (KRaft) | 4.4.0 | `apache/kafka:4.4.0@sha256:833b867a…9f777e0f` | 0.5 |
 | confluent-kafka (Python) | ≥ 2.6 (locked in `uv.lock`) | `pyproject.toml` | 0.5 |
 | ClickHouse | 26.8.40.7 (26.8 LTS) | `clickhouse/clickhouse-server:26.8.40.7@sha256:6d462904…2330d59` | 0.4 |
-| Postgres | TBD | | 0.2 |
+| Postgres | 18.7 | `postgres:18.7@sha256:e754b839…62a16fd61` (19 GA was 2026-11-19, too new) | 0.6 |
 | Prefect | TBD | | 0.2 |
 | Superset | TBD | | 0.2 |
