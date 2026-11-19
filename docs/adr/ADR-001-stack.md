@@ -1,6 +1,6 @@
 # ADR-001: Stack choice
 
-- Status: Accepted
+- Status: Accepted (object store amended by ADR-006)
 - Date: 2026-11-19
 
 ## Context
@@ -10,7 +10,7 @@ Portfolio project on real Lichess data. Must differ from prior projects (Databri
 | Layer | Choice |
 | --- | --- |
 | Batch compute | Apache Spark standalone (Docker) |
-| Table format | Delta Lake OSS on MinIO |
+| Table format | Delta Lake OSS on S3-compatible storage (SeaweedFS, see ADR-006) |
 | Transport | Apache Kafka (KRaft) |
 | Real-time + OLAP | ClickHouse (Kafka engine + MVs) |
 | Transformations | SQLMesh (state in Postgres) |

@@ -5,10 +5,13 @@ description = "Chess analytics on Lichess data: Spark + Delta batch, Kafka + Cli
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+    "boto3>=1.35",
+]
 
 [dependency-groups]
 dev = [
+    "boto3-stubs[s3]>=1.35",
     "mypy>=1.11",
     "pre-commit>=3.8",
     "pytest>=8.3",
@@ -36,4 +39,7 @@ files = ["ingest", "live", "flows", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m 'not integration'"
+markers = [
+    "integration: needs running services (make up)",
+]

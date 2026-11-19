@@ -1,7 +1,15 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-.PHONY: help setup lint format typecheck test up down month backfill live bench
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
+PROFILES ?= lake
+COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
+
+.PHONY: help setup lint format typecheck test test-integration up down ps buckets month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -21,14 +29,29 @@ format: ## Auto-format
 typecheck: ## mypy strict
 	uv run mypy
 
-test: ## Run tests
+test: ## Run unit tests
 	uv run pytest
 
-up: ## Start platform (Phase 0.2)
-	@echo "not implemented yet" && exit 1
+test-integration: ## Run integration tests against running services
+	uv run pytest -m integration
 
-down: ## Stop platform (Phase 0.2)
-	@echo "not implemented yet" && exit 1
+up: ## Start services: make up PROFILES="lake spark"
+	$(COMPOSE) up -d --wait
+	@if echo "$(PROFILES)" | grep -qw lake; then $(MAKE) --no-print-directory buckets; fi
+
+buckets: ## Create the lake bucket if missing (idempotent)
+	@if $(COMPOSE) exec -T seaweedfs sh -c 'echo "s3.bucket.list" | weed shell' 2>/dev/null | grep -qw "$(LAKE_BUCKET)"; then \
+		echo "bucket $(LAKE_BUCKET): exists"; \
+	else \
+		$(COMPOSE) exec -T seaweedfs sh -c 'echo "s3.bucket.create -name $(LAKE_BUCKET)" | weed shell' >/dev/null 2>&1 \
+		&& echo "bucket $(LAKE_BUCKET): created"; \
+	fi
+
+down: ## Stop services (keeps data volumes)
+	$(COMPOSE) down
+
+ps: ## Show service status
+	$(COMPOSE) ps
 
 month: ## Process one month: make month M=2016-01 (Phase 1)
 	@echo "not implemented yet" && exit 1

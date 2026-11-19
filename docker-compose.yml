@@ -1,0 +1,41 @@
+name: lichess
+
+# Profiles: lake | spark | stream | olap | bi
+# Start with: make up PROFILES="lake"
+# Host ports use the 1xxxx range to avoid clashing with other local projects.
+
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.54@sha256:4b42c212543a0acd4c0e675215ecdcaf62a186ef98def76c7e12701871222d15
+    profiles: ["lake"]
+    restart: unless-stopped
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        cat > /tmp/s3.json <<JSON
+        {"identities":[{"name":"admin","credentials":[{"accessKey":"$${S3_ACCESS_KEY}","secretKey":"$${S3_SECRET_KEY}"}],"actions":["Admin","Read","List","Tagging","Write"]}]}
+        JSON
+        exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json
+    ports:
+      - "127.0.0.1:${S3_PORT:-18333}:8333"            # S3 API
+      - "127.0.0.1:${SEAWEED_FILER_PORT:-18888}:8888"  # filer UI
+      - "127.0.0.1:${SEAWEED_MASTER_PORT:-19333}:9333" # master UI
+    volumes:
+      - seaweedfs-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+volumes:
+  seaweedfs-data:
