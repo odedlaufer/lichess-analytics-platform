@@ -2,7 +2,15 @@
 
 Large-scale batch (Spark + Delta on MinIO) and real-time OLAP (Kafka + ClickHouse) analytics on public Lichess data.
 
-> Status: Phase 0 — setup.
+> Status: Phase 0 complete (2026-11-23). Next: Phase 1, batch ingest.
+
+## Phase 0 gate
+| Check | Result |
+| --- | --- |
+| `make up-all`: 10 services healthy | ✅ ~2.9 GB idle memory |
+| Spark writes Delta to the lake (`make gate`) | ✅ 1,000 rows in 12 s |
+| ClickHouse reads it via `s3()` and `deltaLake()` | ✅ count and sum match |
+| `make test-integration` | ✅ 20 passed |
 
 ## Quickstart
 Requires: Python 3.12, [uv](https://docs.astral.sh/uv/), Docker.
@@ -11,7 +19,8 @@ Requires: Python 3.12, [uv](https://docs.astral.sh/uv/), Docker.
 cp .env.example .env            # then set S3_SECRET_KEY
 make setup
 make lint typecheck test        # unit tests, no services needed
-make up PROFILES=lake           # object store
+make up-all                     # every service
+make up PROFILES=lake           # object store only
 make test-integration           # tests against running services
 make build PROFILES="lake spark"        # build the Spark image
 make up PROFILES="lake spark"           # + Spark cluster

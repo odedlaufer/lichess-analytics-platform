@@ -1,6 +1,6 @@
 # ADR-002: Version matrix
 
-- Status: Proposed (filled in as each service lands in Phase 0)
+- Status: Accepted (Phase 0 complete, 2026-11-23). Changes go through a new PR updating this table.
 - Date: 2026-11-19
 
 Images are pinned by tag **and** digest in `docker-compose.yml`. Python packages are pinned by `uv.lock`.

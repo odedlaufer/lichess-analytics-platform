@@ -7,9 +7,10 @@ export
 endif
 
 PROFILES ?= lake
+ALL_PROFILES := lake spark stream olap orch bi
 COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
 
-.PHONY: help setup lint format typecheck check test test-integration up down ps buckets topics build spark-smoke gate month backfill live bench
+.PHONY: help setup lint format typecheck check test test-integration up up-all down down-all ps buckets topics build spark-smoke gate month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -61,6 +62,12 @@ spark-smoke: ## Delta round-trip on the cluster: make spark-smoke PROFILES="lake
 gate: ## Phase 0 gate: Spark writes Delta, ClickHouse reads it (PROFILES="lake spark olap")
 	$(COMPOSE) run --rm spark-submit spark/jobs/write_gate_table.py
 	uv run pytest -m integration tests/integration/test_clickhouse.py
+
+up-all: ## Start every service (all profiles)
+	@$(MAKE) --no-print-directory up PROFILES="$(ALL_PROFILES)"
+
+down-all: ## Stop every service (keeps data volumes)
+	@$(MAKE) --no-print-directory down PROFILES="$(ALL_PROFILES)"
 
 down: ## Stop services (keeps data volumes)
 	$(COMPOSE) down
