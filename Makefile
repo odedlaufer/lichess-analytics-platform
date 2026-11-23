@@ -10,7 +10,7 @@ PROFILES ?= lake
 ALL_PROFILES := lake spark stream olap orch bi
 COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
 
-.PHONY: help setup lint format typecheck check test test-integration up up-all down down-all ps buckets topics build spark-smoke gate download chunk month backfill live bench
+.PHONY: help setup lint format typecheck check test test-integration up up-all down down-all ps buckets topics build spark-smoke gate download chunk bronze test-spark month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -80,6 +80,13 @@ download: ## Download + verify one month: make download M=2013-01
 
 chunk: ## Chunk a downloaded month into the lake: make chunk M=2013-01 [KEEP=1] [TARGET_MB=256]
 	uv run python -m ingest.chunk --month $(M) --target-mb $(or $(TARGET_MB),256) $(if $(KEEP),--keep-download,)
+
+bronze: ## Bronze job on the cluster: make bronze M=2013-01 PROFILES="lake spark"
+	$(COMPOSE) run --rm spark-submit spark/jobs/bronze.py --month $(M)
+
+test-spark: ## Spark job tests in the Spark image (local mode, local files)
+	docker compose --profile lake --profile spark --profile tools run --rm --no-deps spark-submit \
+		--master 'local[2]' --conf spark.eventLog.enabled=false spark/tests/test_bronze.py
 
 month: ## Process one month: make month M=2016-01 (Phase 1)
 	@echo "not implemented yet" && exit 1
