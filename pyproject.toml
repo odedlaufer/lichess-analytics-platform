@@ -11,6 +11,7 @@ dependencies = [
     "confluent-kafka>=2.6",
     "httpx>=0.27",
     "prefect==3.9.3",  # must equal the server image version
+    "zstandard>=0.25.0",
 ]
 
 [dependency-groups]

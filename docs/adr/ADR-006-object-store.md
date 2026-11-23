@@ -33,3 +33,18 @@ Use SeaweedFS (`weed server -s3`) as a single container in the `lake` profile.
   has one writer per table, so that holds.
 - Integration tests (`make test-integration`) cover bucket existence, object
   round-trip and credential rejection.
+
+## Incident: OOM kill during chunk upload (2026-11-23)
+Chunking 2016-01 (831 MiB, 256 MiB chunks) killed SeaweedFS mid-upload. The kernel log
+showed a memory-cgroup OOM kill of `weed` at ~890 MiB RSS against the 1 GB limit (Docker's
+`OOMKilled` flag read false; `dmesg` is authoritative). After the restart the master took
+~16 s to regain leadership, so requests in that window failed.
+
+Causes: one `weed server` process runs master + volume + filer + S3, so uploads are buffered
+in several layers; the Go GC is unaware of the cgroup limit; the client sent 10 parallel parts.
+
+Fix:
+- container limit 2 GB and `GOMEMLIMIT=1536MiB`
+- `-s3/-filer/-volume.concurrentUploadLimitMB=64`
+- chunk uploads with `max_concurrency=2`, 16 MiB parts
+- `-master.telemetry=false` (it reports usage once 10 GiB are stored)

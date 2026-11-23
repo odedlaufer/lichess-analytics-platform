@@ -23,7 +23,7 @@ Why Spark 4.1.1 and not 4.2: Delta 4.4.0 supports 4.2.0, but the official Spark 
 ## Laptop memory budget (Docker ≈ 9.7 GB)
 | Service | Limit |
 | --- | --- |
-| seaweedfs | 1 GB |
+| seaweedfs | 2 GB (`GOMEMLIMIT=1536MiB`; was 1 GB, OOM-killed, see ADR-006) |
 | spark-master | 768 MB |
 | spark-history | 768 MB |
 | spark-worker × 2 | 3.5 GB each (2.5 GB executor pool + 512 MB daemon + Python workers) |
