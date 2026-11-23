@@ -10,7 +10,7 @@ PROFILES ?= lake
 ALL_PROFILES := lake spark stream olap orch bi
 COMPOSE := docker compose $(addprefix --profile ,$(PROFILES))
 
-.PHONY: help setup lint format typecheck check test test-integration up up-all down down-all ps buckets topics build spark-smoke gate month backfill live bench
+.PHONY: help setup lint format typecheck check test test-integration up up-all down down-all ps buckets topics build spark-smoke gate download month backfill live bench
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -74,6 +74,9 @@ down: ## Stop services (keeps data volumes)
 
 ps: ## Show service status
 	$(COMPOSE) ps
+
+download: ## Download + verify one month: make download M=2013-01
+	uv run python -m ingest.download --month $(M)
 
 month: ## Process one month: make month M=2016-01 (Phase 1)
 	@echo "not implemented yet" && exit 1
