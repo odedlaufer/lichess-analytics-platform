@@ -263,6 +263,7 @@ def main() -> None:
             chunks=len(m.chunks),
             uncompressed_bytes=m.uncompressed_bytes_total,
             peak_local_bytes=m.peak_local_bytes,
+            source_bytes=m.source_bytes,
             source_sha256=m.source_sha256,
         )
         # FR-DL3: the chunker's count is the source of truth for every later stage.
