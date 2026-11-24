@@ -19,6 +19,8 @@ from pathlib import Path
 
 import httpx
 
+from ops.runs import RunRecorder, default_sink
+
 BASE_URL = "https://database.lichess.org/standard"
 FIRST_MONTH = "2013-01"
 MONTH_RE = re.compile(r"^20\d{2}-(0[1-9]|1[0-2])$")
@@ -182,7 +184,10 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     started = time.monotonic()
-    result = download_month(args.month, args.dest)
+    with RunRecorder("download", args.month, default_sink()) as rec:
+        result = download_month(args.month, args.dest)
+        rec.set(bytes_out=result.size_bytes)
+        rec.details.update(skipped=result.skipped, sha256=result.sha256)
     print(
         f"DOWNLOAD month={args.month} file={result.path} "
         f"mib={result.size_bytes / 2**20:.1f} sha256={result.sha256} "

@@ -1,0 +1,14 @@
+<!-- Pipelines write run metrics with this user: INSERT/SELECT on ops.* only. -->
+<clickhouse>
+    <users>
+        <ops_writer>
+            <password from_env="CLICKHOUSE_OPS_PASSWORD"/>
+            <profile>default</profile>
+            <quota>default</quota>
+            <networks><ip>::/0</ip></networks>
+            <grants>
+                <query>GRANT INSERT, SELECT ON ops.*</query>
+            </grants>
+        </ops_writer>
+    </users>
+</clickhouse>
