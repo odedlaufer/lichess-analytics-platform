@@ -2,10 +2,15 @@
 
 import json
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Mapping, Sequence
 from typing import Any
+
+
+class ClickHouseError(RuntimeError):
+    """ClickHouse rejected a request; the message is ClickHouse's own error text."""
 
 
 class ClickHouseHTTP:
@@ -31,8 +36,12 @@ class ClickHouseHTTP:
             method="POST",
             headers={"X-ClickHouse-User": self.user, "X-ClickHouse-Key": self.password},
         )
-        with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
-            return str(resp.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+                return str(resp.read().decode())
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode(errors="replace").strip()
+            raise ClickHouseError(f"HTTP {err.code}: {detail[:800]}") from err
 
     def insert(self, table: str, rows: Sequence[Mapping[str, Any]]) -> None:
         body = "\n".join(json.dumps(r, default=str) for r in rows).encode()

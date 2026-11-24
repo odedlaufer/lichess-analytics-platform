@@ -2,7 +2,7 @@
 
 Large-scale batch (Spark + Delta on MinIO) and real-time OLAP (Kafka + ClickHouse) analytics on public Lichess data.
 
-> Status: Phase 0 complete (2026-11-23). Next: Phase 1, batch ingest.
+> Status: Phase 1 complete: download → chunk → bronze with exact reconciliation; baseline 37,400 games/s (see `docs/benchmark.md`). Next: Phase 2, silver.
 
 ## Phase 0 gate
 | Check | Result |

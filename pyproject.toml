@@ -44,7 +44,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "RUF", "PT", "C4"]
 python_version = "3.12"
 strict = true
 warn_unused_configs = true
-files = ["ingest", "live", "flows", "spark", "tools", "tests"]
+files = ["ingest", "live", "flows", "spark", "tools", "ops", "benchmarks", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

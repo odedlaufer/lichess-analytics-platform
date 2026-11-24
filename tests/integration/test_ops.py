@@ -1,12 +1,11 @@
 """ops.* tables and the ops_writer user. Requires `make up PROFILES="olap"` (DDL applied)."""
 
 import os
-import urllib.error
 
 import pytest
 from clickhouse_connect.driver.client import Client
 
-from ops.clickhouse import ClickHouseHTTP
+from ops.clickhouse import ClickHouseError, ClickHouseHTTP
 from ops.runs import RunRecorder
 
 pytestmark = pytest.mark.integration
@@ -52,9 +51,8 @@ def test_recorder_roundtrip(ch: Client, writer: ClickHouseHTTP) -> None:
     ],
 )
 def test_ops_writer_is_denied(writer: ClickHouseHTTP, sql: str) -> None:
-    with pytest.raises(urllib.error.HTTPError) as err:
+    with pytest.raises(ClickHouseError, match="ACCESS_DENIED"):
         writer.query(sql)
-    assert "ACCESS_DENIED" in err.value.read().decode()
 
 
 def test_ops_writer_env_points_at_compose_clickhouse() -> None:

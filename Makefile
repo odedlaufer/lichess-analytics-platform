@@ -96,8 +96,11 @@ test-spark: ## Spark job tests in the Spark image (local mode, local files)
 	docker compose --profile lake --profile spark --profile tools run --rm --no-deps spark-submit \
 		--master 'local[2]' --conf spark.eventLog.enabled=false spark/tests/test_bronze.py
 
-month: ## Process one month: make month M=2016-01 (Phase 1)
-	@echo "not implemented yet" && exit 1
+month: ## Whole pipeline for one month (so far: download -> chunk -> bronze): make month M=2016-01
+	@test -n "$(M)" || (echo "usage: make month M=YYYY-MM" && exit 1)
+	@$(MAKE) --no-print-directory download M=$(M)
+	@$(MAKE) --no-print-directory chunk M=$(M)
+	@$(MAKE) --no-print-directory bronze M=$(M) PROFILES="lake spark olap"
 
 backfill: ## Backfill: make backfill FROM=2013-01 TO=2016-12 (Phase 2)
 	@echo "not implemented yet" && exit 1
@@ -105,5 +108,5 @@ backfill: ## Backfill: make backfill FROM=2013-01 TO=2016-12 (Phase 2)
 live: ## Start live collectors (Phase 4)
 	@echo "not implemented yet" && exit 1
 
-bench: ## Run scaling benchmark (Phase 5)
-	@echo "not implemented yet" && exit 1
+bench: ## BM-1 throughput vs month size: make bench MONTHS="2013-01 2016-01" [VARIANT=baseline]
+	uv run python -m benchmarks.bm1 --variant $(or $(VARIANT),baseline) $(MONTHS)
