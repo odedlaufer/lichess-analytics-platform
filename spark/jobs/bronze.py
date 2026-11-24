@@ -21,7 +21,8 @@ from typing import Any
 from pyspark.sql import Column, DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 
-from spark.jobs.lake import DEFAULT_LAKE_ROOT, read_manifest, table_path
+from ops.runs import RunRecorder, default_sink
+from spark.jobs.lake import DEFAULT_LAKE_ROOT, read_manifest, stage_metrics, table_path
 
 RECORD_SEP = "\n[Event "
 HEADER_RE = r'(?m)^\[([A-Za-z0-9_]+) "(.*)"\]$'
@@ -168,11 +169,31 @@ def main() -> None:
     args = parser.parse_args()
 
     spark = SparkSession.builder.appName(f"bronze-{args.month}").getOrCreate()
-    result = run(spark, args.month, args.lake_root)
-    print("BRONZE " + json.dumps(result))
-    spark.stop()
-    if not (result["dq03_reconciled"] and result["dq04_unique_ids"]):
-        raise SystemExit(f"bronze {args.month}: reconciliation failed")
+    with RunRecorder("bronze", args.month, default_sink()) as rec:
+        try:
+            result = run(spark, args.month, args.lake_root)
+            print("BRONZE " + json.dumps(result))
+            rec.set(
+                rows_in=result["manifest_games"],
+                rows_out=result["bronze_rows"],
+                rows_quarantined=result["quarantine_rows"],
+                **stage_metrics(spark),
+            )
+            rec.details.update(
+                chunks=result["chunks"],
+                quarantine_by_rule=result["quarantine_by_rule"],
+                app_id=spark.sparkContext.applicationId,
+            )
+            rec.reconcile(
+                "bronze",
+                expected=result["manifest_games"],
+                actual=result["bronze_rows"],
+                quarantined=result["quarantine_rows"],
+            )
+        finally:
+            spark.stop()
+        if not (result["dq03_reconciled"] and result["dq04_unique_ids"]):
+            raise SystemExit(f"bronze {args.month}: reconciliation failed")
 
 
 if __name__ == "__main__":

@@ -32,6 +32,7 @@ import zstandard
 from boto3.s3.transfer import TransferConfig
 
 from ingest.download import file_name, sha256_file, validate_month
+from ops.runs import RunRecorder, default_sink
 
 GAME_START = b"[Event "
 NL_GAME_START = b"\n" + GAME_START
@@ -245,13 +246,27 @@ def main() -> None:
     if not source.exists():
         raise SystemExit(f"{source} not found; run `make download M={args.month}` first")
 
-    m = chunk_month(
-        args.month,
-        source,
-        S3ChunkSink(os.environ["LAKE_BUCKET"]),
-        work_dir=data_dir,
-        target_bytes=args.target_mb << 20,
-    )
+    with RunRecorder("chunk", args.month, default_sink()) as rec:
+        m = chunk_month(
+            args.month,
+            source,
+            S3ChunkSink(os.environ["LAKE_BUCKET"]),
+            work_dir=data_dir,
+            target_bytes=args.target_mb << 20,
+        )
+        rec.set(
+            rows_out=m.games_total,
+            bytes_in=m.source_bytes,
+            bytes_out=sum(c.compressed_bytes for c in m.chunks),
+        )
+        rec.details.update(
+            chunks=len(m.chunks),
+            uncompressed_bytes=m.uncompressed_bytes_total,
+            peak_local_bytes=m.peak_local_bytes,
+            source_sha256=m.source_sha256,
+        )
+        # FR-DL3: the chunker's count is the source of truth for every later stage.
+        rec.reconcile("source", expected=m.games_total, actual=m.games_total)
     if not args.keep_download:
         source.unlink()
     print(
