@@ -92,15 +92,25 @@ chunk: ## Chunk a downloaded month into the lake: make chunk M=2013-01 [KEEP=1] 
 bronze: ## Bronze job on the cluster: make bronze M=2013-01 PROFILES="lake spark olap"
 	$(COMPOSE) run --rm spark-submit spark/jobs/bronze.py --month $(M)
 
-test-spark: ## Spark job tests in the Spark image (local mode, local files)
-	docker compose --profile lake --profile spark --profile tools run --rm --no-deps spark-submit \
-		--master 'local[2]' --conf spark.eventLog.enabled=false spark/tests/test_bronze.py
+silver: ## Silver job on the cluster: make silver M=2013-01 PROFILES="lake spark olap"
+	$(COMPOSE) run --rm spark-submit spark/jobs/silver.py --month $(M)
 
-month: ## Whole pipeline for one month (so far: download -> chunk -> bronze): make month M=2016-01
+profile-bronze: ## Profile bronze headers for a month (evidence for silver rules): make profile-bronze M=2013-01
+	$(COMPOSE) run --rm spark-submit spark/jobs/profile_bronze.py --month $(M)
+
+test-spark: ## Spark job tests in the Spark image (local mode, local files)
+	@for t in spark/tests/test_*.py; do \
+		echo "== $$t"; \
+		docker compose --profile lake --profile spark --profile tools run --rm --no-deps spark-submit \
+			--master 'local[2]' --conf spark.eventLog.enabled=false $$t || exit 1; \
+	done
+
+month: ## Whole pipeline for one month (so far: download -> chunk -> bronze -> silver): make month M=2016-01
 	@test -n "$(M)" || (echo "usage: make month M=YYYY-MM" && exit 1)
 	@$(MAKE) --no-print-directory download M=$(M)
 	@$(MAKE) --no-print-directory chunk M=$(M)
 	@$(MAKE) --no-print-directory bronze M=$(M) PROFILES="lake spark olap"
+	@$(MAKE) --no-print-directory silver M=$(M) PROFILES="lake spark olap"
 
 backfill: ## Backfill: make backfill FROM=2013-01 TO=2016-12 (Phase 2)
 	@echo "not implemented yet" && exit 1
