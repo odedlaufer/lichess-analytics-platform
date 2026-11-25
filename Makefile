@@ -100,6 +100,10 @@ bronze: ## Bronze job on the cluster: make bronze M=2013-01 PROFILES="lake spark
 silver: ## Silver job on the cluster: make silver M=2013-01 PROFILES="lake spark olap"
 	$(COMPOSE) run --rm spark-submit spark/jobs/silver.py --month $(M)
 
+golden-extract: ## Regenerate golden fixtures from the lake (review the diff before committing)
+	$(COMPOSE) run --rm -T spark-submit spark/jobs/extract_golden.py --months 2013-01 2016-01 \
+		| uv run python -m tools.write_golden
+
 profile-bronze: ## Profile bronze headers for a month (evidence for silver rules): make profile-bronze M=2013-01
 	$(COMPOSE) run --rm spark-submit spark/jobs/profile_bronze.py --month $(M)
 
