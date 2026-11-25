@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
 from spark.jobs import silver
+from spark.jobs.contracts import contract_errors
 
 MONTH = "2016-01"
 BASE = {
@@ -113,6 +115,10 @@ def main() -> None:
             },
         )
         check("dq08 fails on this tiny sample", not result["dq08_ok"])
+        check("contract passes on silver output", result["contract_ok"])
+        check(
+            "header keys collected", {"Event", "Site", "WhiteTitle"} <= set(result["header_keys"])
+        )
 
         s = {
             r["game_id"]: r
@@ -165,6 +171,22 @@ def main() -> None:
         check("ply count with eval comments", s["blitz001"]["ply_count"] == 3)
         check("ply count no moves", s["bullet01"]["ply_count"] == 0)
         check("has_eval / has_clock", s["blitz001"]["has_eval"] and not s["blitz001"]["has_clock"])
+
+        written = spark.read.format("delta").load(f"{root}/silver/games")
+        bad = written.withColumn(
+            "speed", F.when(F.col("game_id") == "blitz001", "hyper").otherwise(F.col("speed"))
+        ).withColumn(
+            "white_elo", F.when(F.col("game_id") == "rapid001", 9999).otherwise(F.col("white_elo"))
+        )
+        failed = {(e["column"], e["check"].split("(")[0]) for e in contract_errors(bad)}
+        check(
+            "contract catches bad values", failed == {("speed", "isin"), ("white_elo", "in_range")}
+        )
+        extra = contract_errors(written.withColumn("surprise", F.lit(1)))
+        check(
+            "contract rejects unknown columns",
+            [e["type"] for e in extra] == ["COLUMN_NOT_IN_SCHEMA"],
+        )
 
         again = silver.run(spark, MONTH, root)
         check("rerun idempotent", (again["silver_rows"], again["quarantine_rows"]) == (9, 8))

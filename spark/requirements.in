@@ -1,0 +1,4 @@
+# Python packages for Spark jobs (driver and executors). Lock: make spark-lock
+pandera==0.35.0
+pandas==2.3.3
+pyarrow==21.0.0

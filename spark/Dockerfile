@@ -15,7 +15,7 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends curl ca-certificates gnupg software-properties-common; \
     add-apt-repository -y ppa:deadsnakes/ppa; \
     apt-get update; \
-    apt-get install -y --no-install-recommends python3.12; \
+    apt-get install -y --no-install-recommends python3.12 python3.12-venv; \
     apt-get purge -y software-properties-common; \
     apt-get autoremove -y; \
     rm -rf /var/lib/apt/lists/*; \
@@ -35,7 +35,15 @@ RUN set -eux; \
       echo "$(curl -fsSL "${MAVEN}/${coord}.sha1")  ${f}" | sha1sum -c -; \
     done
 
-ENV PYSPARK_PYTHON=/usr/bin/python3.12 \
-    PYSPARK_DRIVER_PYTHON=/usr/bin/python3.12
+# Job packages (Pandera contracts), hash-locked in spark/requirements.txt (make spark-lock).
+COPY requirements.txt /tmp/requirements.txt
+RUN set -eux; \
+    python3.12 -m venv /opt/pyenv; \
+    /opt/pyenv/bin/pip install --no-cache-dir --require-hashes -r /tmp/requirements.txt; \
+    rm /tmp/requirements.txt; \
+    /opt/pyenv/bin/python -c "import pandera, pandas, pyarrow; print('pandera', pandera.__version__)"
+
+ENV PYSPARK_PYTHON=/opt/pyenv/bin/python \
+    PYSPARK_DRIVER_PYTHON=/opt/pyenv/bin/python
 
 USER spark

@@ -20,7 +20,10 @@ from typing import Any
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
 
+from ops.clickhouse import ClickHouseHTTP
+from ops.dq import dq_row, header_drift, previous_header_keys
 from ops.runs import RunRecorder, default_sink
+from spark.jobs.contracts import contract_errors
 from spark.jobs.lake import DEFAULT_LAKE_ROOT, stage_metrics, table_path
 
 PARSE_SUCCESS_MIN = 0.9999
@@ -192,6 +195,12 @@ def run(spark: SparkSession, month: str, root: str = DEFAULT_LAKE_ROOT) -> dict[
     quarantine_rows = sum(rules.values())
     speeds = {r["speed"]: r["count"] for r in s.groupBy("speed").count().collect()}
     success = silver_rows / bronze_rows if bronze_rows else 0.0
+    header_keys = sorted(
+        r[0] for r in bronze.select(F.explode(F.map_keys("headers"))).distinct().collect()
+    )
+    t_contract = time.monotonic()
+    errors = contract_errors(s)
+    contract_seconds = round(time.monotonic() - t_contract, 1)
 
     return {
         "month": month,
@@ -203,8 +212,39 @@ def run(spark: SparkSession, month: str, root: str = DEFAULT_LAKE_ROOT) -> dict[
         "parse_success": round(success, 6),
         "reconciled": silver_rows + quarantine_rows == bronze_rows,
         "dq08_ok": success >= PARSE_SUCCESS_MIN,
+        "contract_ok": not errors,
+        "contract_errors": errors,
+        "contract_seconds": contract_seconds,
+        "header_keys": header_keys,
         "seconds": round(time.monotonic() - started, 1),
     }
+
+
+def record_dq(rec: RunRecorder, sink: object, month: str, result: dict[str, Any]) -> None:
+    """DQ-07 header drift (warn only) and the contract outcome, in ops.dq_results."""
+    previous = None
+    if isinstance(sink, ClickHouseHTTP):
+        try:
+            previous = previous_header_keys(sink, month)
+        except Exception as err:  # fail open, like run metrics
+            print(f"WARNING: could not read previous header keys: {err}")
+    drift = header_drift(previous, set(result["header_keys"]))
+    if drift["status"] == "warn":
+        print(f"DQ-07 WARN header drift: added={drift['added']} removed={drift['removed']}")
+    rec.write(
+        "ops.dq_results", dq_row(rec.run_id, month, "bronze", "DQ-07", drift["status"], drift)
+    )
+    rec.write(
+        "ops.dq_results",
+        dq_row(
+            rec.run_id,
+            month,
+            "silver",
+            "silver_contract",
+            "pass" if result["contract_ok"] else "fail",
+            {"errors": result["contract_errors"], "seconds": result["contract_seconds"]},
+        ),
+    )
 
 
 def main() -> None:
@@ -214,7 +254,8 @@ def main() -> None:
     args = parser.parse_args()
 
     spark = SparkSession.builder.appName(f"silver-{args.month}").getOrCreate()
-    with RunRecorder("silver", args.month, default_sink()) as rec:
+    sink = default_sink()
+    with RunRecorder("silver", args.month, sink) as rec:
         try:
             result = run(spark, args.month, args.lake_root)
             print("SILVER " + json.dumps(result))
@@ -238,6 +279,7 @@ def main() -> None:
             )
         finally:
             spark.stop()
+        record_dq(rec, sink, args.month, result)
         if not result["reconciled"]:
             raise SystemExit(f"silver {args.month}: reconciliation failed")
         if not result["dq08_ok"]:
@@ -245,6 +287,8 @@ def main() -> None:
                 f"silver {args.month}: DQ-08 parse success {result['parse_success']} "
                 f"< {PARSE_SUCCESS_MIN}"
             )
+        if not result["contract_ok"]:
+            raise SystemExit(f"silver {args.month}: contract failed: {result['contract_errors']}")
 
 
 if __name__ == "__main__":

@@ -78,7 +78,7 @@ class RunRecorder:
 
     def reconcile(self, stage: str, expected: int, actual: int, quarantined: int = 0) -> bool:
         ok = actual + quarantined == expected
-        self._write(
+        self.write(
             "ops.reconciliation",
             {
                 "month": self.month,
@@ -114,10 +114,10 @@ class RunRecorder:
             "details": json.dumps(self.details, default=str),
             **self.metrics,
         }
-        self._write("ops.pipeline_runs", row)
+        self.write("ops.pipeline_runs", row)
         return False  # never swallow the job's exception
 
-    def _write(self, table: str, row: Mapping[str, Any]) -> None:
+    def write(self, table: str, row: Mapping[str, Any]) -> None:
         if self.sink is None:
             return
         try:
