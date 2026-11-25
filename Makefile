@@ -61,6 +61,11 @@ buckets: ## Create the lake bucket and directory markers (idempotent)
 topics: ## Create Kafka topics declared in live/topics.py (idempotent)
 	uv run python -m live.topics
 
+SPARK_LOCK_CUTOFF ?= 2026-11-10
+spark-lock: ## Lock Spark image Python deps with hashes (only releases before SPARK_LOCK_CUTOFF)
+	uv pip compile spark/requirements.in --universal --python-version 3.12 --generate-hashes \
+		--exclude-newer $(SPARK_LOCK_CUTOFF) -o spark/requirements.txt
+
 build: ## Build local images (Spark)
 	$(COMPOSE) build
 

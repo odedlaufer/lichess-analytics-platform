@@ -17,6 +17,7 @@ Images are pinned by tag **and** digest in `docker-compose.yml`. Python packages
 | Delta Lake | 4.4.0 (`delta-spark_4.1_2.13`) | supports Spark 4.0.1 / 4.1.0 / 4.2.0; `spark/Dockerfile` | 0.3 |
 | Python in Spark image | 3.12 (deadsnakes) | matches repo; driver and executors must match | 0.3 |
 | PySpark (dev, typing/tests) | 4.1.1 | `pyproject.toml`, equals cluster version | 0.3 |
+| Spark job Python packages | pandera 0.35.0, pandas 2.3.3, pyarrow 21.0.0 (+ deps) | `spark/requirements.txt`, hash-locked, venv `/opt/pyenv` | 2.2 |
 
 Why Spark 4.1.1 and not 4.2: Delta 4.4.0 supports 4.2.0, but the official Spark image is published up to 4.1.1.
 
